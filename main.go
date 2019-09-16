@@ -21,6 +21,11 @@ var migdir string
 var migtab string
 
 func main() {
+	if len(os.Args) == 1 {
+		fmt.Println("usage: mig new|up|down")
+		return
+	}
+
 	dbhost = getenv("DBHOST", "localhost")
 	dbport = getenv("DBPORT", "")
 	dbuser = getenv("DBUSER", "root")
@@ -29,19 +34,15 @@ func main() {
 	migdir = getenv("MIGDIR", "migrations")
 	migtab = getenv("MIGTAB", "migration_log")
 
+	if os.Args[1] == "new" {
+		migrationNew()
+		return
+	}
+
 	db = openDatabase(dbhost, dbport, dbuser, dbpass, dbname)
 	defer db.Close()
 
 	migrationInit()
-
-	if len(os.Args) == 1 {
-		fmt.Println("usage: mig new|up|down")
-		return
-	}
-
-	if os.Args[1] == "new" {
-		migrationNew()
-	}
 
 	if os.Args[1] == "up" {
 		migrationUp()
@@ -64,21 +65,21 @@ func migrationNew() {
 	}
 
 	action := os.Args[2]
-	now := time.Now().Format("20060102-150405")
+	version := time.Now().Format("20060102-150405")
 
 	// create migration up script
-	filename := filepath.Join(migdir, now+"_"+action+".up.sql")
+	filename := filepath.Join(migdir, version+"_"+action+".up.sql")
 	file, err := os.Create(filename)
 	check(err)
-	file.WriteString("USE " + dbname + "\n")
+	file.WriteString("USE " + dbname + ";\n")
 	file.Close()
 	fmt.Println("Created:", filename)
 
 	// create migration down script
-	filename = filepath.Join(migdir, now+"_"+action+".down.sql")
+	filename = filepath.Join(migdir, version+"_"+action+".down.sql")
 	file, err = os.Create(filename)
 	check(err)
-	file.WriteString("USE " + dbname + "\n")
+	file.WriteString("USE " + dbname + ";\n")
 	file.Close()
 	fmt.Println("Created:", filename)
 }
@@ -94,10 +95,10 @@ func migrationUp() {
 
 	for _, file := range files {
 		basename := filepath.Base(file)
-		id := basename[0:15]
+		version := basename[0:15]
 		action := basename[16:]
 
-		sql := fmt.Sprintf("INSERT INTO %s set id='%s', action='%s'", migtab, id, action)
+		sql := fmt.Sprintf("INSERT INTO %s set id='%s', action='%s'", migtab, version, action)
 		_, err = db.Exec(sql)
 		if err != nil {
 			continue // next migration script
@@ -118,15 +119,15 @@ func migrationUp() {
 }
 
 func migrationDown() {
-	var id, action, sql string
+	var version, action, sql string
 
 	// fetch last migration
 	sql = fmt.Sprintf("SELECT id, action FROM %s ORDER BY id DESC LIMIT 1", migtab)
-	err := db.QueryRow(sql).Scan(&id, &action)
+	err := db.QueryRow(sql).Scan(&version, &action)
 	check(err)
 
 	// find the migration down script
-	filename := filepath.Join(migdir, id+"_"+action[0:len(action)-7]+".down.sql")
+	filename := filepath.Join(migdir, version+"_"+action[0:len(action)-7]+".down.sql")
 	script, err := ioutil.ReadFile(filename)
 	check(err)
 
@@ -134,7 +135,7 @@ func migrationDown() {
 	_, err = db.Exec(string(script))
 	check(err)
 
-	sql = fmt.Sprintf("DELETE FROM %s WHERE id='%s'", migtab, id)
+	sql = fmt.Sprintf("DELETE FROM %s WHERE id='%s'", migtab, version)
 	_, err = db.Exec(sql)
 	check(err)
 
