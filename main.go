@@ -22,7 +22,7 @@ var migtab string
 
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Println("usage: mig new|up|down")
+		fmt.Println("usage: mig new|log|up|down")
 		return
 	}
 
