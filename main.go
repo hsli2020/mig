@@ -51,6 +51,10 @@ func main() {
 	if os.Args[1] == "down" {
 		migrationDown()
 	}
+
+	if os.Args[1] == "log" {
+		migrationLog()
+	}
 }
 
 func migrationInit() {
@@ -140,6 +144,21 @@ func migrationDown() {
 	check(err)
 
 	fmt.Println("Running:", filename)
+}
+
+func migrationLog() {
+	var version, action, sql string
+
+	sql = fmt.Sprintf("SELECT id, action FROM %s ORDER BY id", migtab)
+	rows, err := db.Query(sql)
+	check(err)
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&version, &action)
+		check(err)
+		fmt.Println(version, action)
+	}
 }
 
 func getenv(name, defaultval string) string {
