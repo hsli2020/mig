@@ -22,7 +22,7 @@ var migtab string
 
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Println("usage: mig new|log|up|down")
+		usage()
 		return
 	}
 
@@ -44,17 +44,26 @@ func main() {
 
 	migrationInit()
 
-	if os.Args[1] == "up" {
+	switch os.Args[1] {
+	case "up", "run":
 		migrationUp()
-	}
 
-	if os.Args[1] == "down" {
+	case "down":
 		migrationDown()
-	}
 
-	if os.Args[1] == "log" {
+	case "log":
 		migrationLog()
+
+	case "help":
+		usage()
+
+	default:
+		fmt.Println("Unknown command:", os.Args[1])
 	}
+}
+
+func usage() {
+	fmt.Println("usage: mig new|up|down|log|help")
 }
 
 func migrationInit() {
@@ -68,11 +77,11 @@ func migrationNew() {
 		return
 	}
 
-	action := os.Args[2]
+	message := os.Args[2]
 	version := time.Now().Format("20060102-150405")
 
 	// create migration up script
-	filename := filepath.Join(migdir, version+"_"+action+".up.sql")
+	filename := filepath.Join(migdir, version+"_"+message+".up.sql")
 	file, err := os.Create(filename)
 	check(err)
 	file.WriteString("USE " + dbname + ";\n")
@@ -80,7 +89,7 @@ func migrationNew() {
 	fmt.Println("Created:", filename)
 
 	// create migration down script
-	filename = filepath.Join(migdir, version+"_"+action+".down.sql")
+	filename = filepath.Join(migdir, version+"_"+message+".down.sql")
 	file, err = os.Create(filename)
 	check(err)
 	file.WriteString("USE " + dbname + ";\n")
@@ -98,40 +107,40 @@ func migrationUp() {
 	}
 
 	for _, file := range files {
-		basename := filepath.Base(file)
-		version := basename[0:15]
-		action := basename[16:]
-
-		sql := fmt.Sprintf("INSERT INTO %s set id='%s', action='%s'", migtab, version, action)
-		_, err = db.Exec(sql)
-		if err != nil {
-			continue // next migration script
-		}
-
+		// load migration script
 		script, err := ioutil.ReadFile(file)
 		if err != nil {
 			continue // next migration script
 		}
 
+		// run migration script
 		_, err = db.Exec(string(script))
 		if err != nil {
 			continue // next migration script
 		}
+
+		// log the migration for tracking
+		basename := filepath.Base(file)
+		version := basename[0:15]
+		message := basename[16:]
+
+		sql := fmt.Sprintf("INSERT INTO %s set id='%s', action='%s'", migtab, version, message)
+		db.Exec(sql)
 
 		fmt.Println("Running:", file)
 	}
 }
 
 func migrationDown() {
-	var version, action, sql string
+	var version, message, sql string
 
 	// fetch last migration
 	sql = fmt.Sprintf("SELECT id, action FROM %s ORDER BY id DESC LIMIT 1", migtab)
-	err := db.QueryRow(sql).Scan(&version, &action)
+	err := db.QueryRow(sql).Scan(&version, &message)
 	check(err)
 
 	// find the migration down script
-	filename := filepath.Join(migdir, version+"_"+action[0:len(action)-7]+".down.sql")
+	filename := filepath.Join(migdir, version+"_"+message[0:len(message)-7]+".down.sql")
 	script, err := ioutil.ReadFile(filename)
 	check(err)
 
@@ -147,7 +156,7 @@ func migrationDown() {
 }
 
 func migrationLog() {
-	var version, action, sql string
+	var version, message, sql string
 
 	sql = fmt.Sprintf("SELECT id, action FROM %s ORDER BY id", migtab)
 	rows, err := db.Query(sql)
@@ -155,9 +164,9 @@ func migrationLog() {
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&version, &action)
+		err := rows.Scan(&version, &message)
 		check(err)
-		fmt.Println(version, action)
+		fmt.Println(version, message)
 	}
 }
 
