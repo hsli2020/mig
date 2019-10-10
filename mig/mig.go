@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"myapp/database"
+	"myapp/mig/database"
 )
 
 var db *sql.DB
