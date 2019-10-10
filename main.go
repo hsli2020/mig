@@ -13,8 +13,6 @@ func main() {
 		return
 	}
 
-	mig.Init()
-
 	switch os.Args[1] {
 	case "new":
 		mig.New(os.Args)

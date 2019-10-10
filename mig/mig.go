@@ -13,17 +13,12 @@ import (
 
 var db *sql.DB
 
-var migdir string
-var migtab string
-var dbname string
+var migdir = getenv("MIGDIR", "migrations")
+var migtab = getenv("MIGTAB", "migration_log")
+var dbname = getenv("DBNAME", "bte")
 
 func Init() {
-	migdir = getenv("MIGDIR", "migrations")
-	migtab = getenv("MIGTAB", "migration_log")
-	dbname = getenv("DBNAME", "bte")
-
 	db = database.Open()
-
 	sql := "CREATE TABLE IF NOT EXISTS " + migtab + " (id varchar(20) not null primary key, action varchar(80) default '', run_at timestamp not null default CURRENT_TIMESTAMP) engine=InnoDB"
 	db.Exec(sql)
 }
@@ -55,6 +50,8 @@ func New(args []string) {
 }
 
 func Up() {
+	Init()
+
 	pattern := filepath.Join(migdir, "*.up.sql")
 
 	files, err := filepath.Glob(pattern)
@@ -89,6 +86,8 @@ func Up() {
 }
 
 func Down() {
+	Init()
+
 	var version, message, sql string
 
 	// fetch last migration
@@ -113,6 +112,8 @@ func Down() {
 }
 
 func Log() {
+	Init()
+
 	var version, message, sql string
 
 	sql = fmt.Sprintf("SELECT id, action FROM %s ORDER BY id", migtab)
