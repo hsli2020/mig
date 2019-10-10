@@ -17,7 +17,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "new":
-		mig.New()
+		mig.New(os.Args)
 
 	case "up", "run":
 		mig.Up()

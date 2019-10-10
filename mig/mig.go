@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,13 +28,13 @@ func Init() {
 	db.Exec(sql)
 }
 
-func New() {
-	if len(os.Args) < 3 {
+func New(args []string) {
+	if len(args) < 3 {
 		fmt.Println("usage: mig new <NAME>")
 		return
 	}
 
-	message := os.Args[2]
+	message := args[2]
 	version := time.Now().Format("20060102-150405")
 
 	// create migration up script
@@ -126,18 +125,4 @@ func Log() {
 		check(err)
 		fmt.Println(version, message)
 	}
-}
-
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func getenv(name, defaultval string) string {
-	val := os.Getenv(name)
-	if val == "" {
-		return defaultval
-	}
-	return val
 }

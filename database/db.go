@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"log"
-	"os"
 )
 
 func Open() *sql.DB {
@@ -33,18 +31,4 @@ func Open() *sql.DB {
 	check(err)
 
 	return db
-}
-
-func getenv(name, defaultval string) string {
-	val := os.Getenv(name)
-	if val == "" {
-		return defaultval
-	}
-	return val
-}
-
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }
